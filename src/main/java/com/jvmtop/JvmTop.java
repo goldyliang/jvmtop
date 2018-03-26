@@ -33,13 +33,9 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.jvmtop.view.*;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
-
-import com.jvmtop.view.ConsoleView;
-import com.jvmtop.view.VMDetailView;
-import com.jvmtop.view.VMOverviewView;
-import com.jvmtop.view.VMProfileView;
 
 /**
  * JvmTop entry point class.
@@ -91,6 +87,7 @@ public class JvmTop
             "delay between each output iteration").withRequiredArg()
         .ofType(Double.class);
     parser.accepts("profile", "start CPU profiling at the specified jvm");
+    parser.accepts("tag", "start CPU profiling as tagged based");
     parser.accepts("sysinfo", "outputs diagnostic information");
     parser.accepts("verbose", "verbose mode");
     parser.accepts("threadlimit",
@@ -141,6 +138,7 @@ public class JvmTop
     double delay = 1.0;
 
     boolean profileMode = a.has("profile");
+    boolean taggedMode = a.has("tag");
 
     Integer iterations = a.has("once") ? 1 : -1;
 
@@ -219,7 +217,11 @@ public class JvmTop
       {
         if (profileMode)
         {
-          jvmTop.run(new VMProfileView(pid, width));
+          if (!taggedMode) {
+            jvmTop.run(new VMProfileView(pid, width));
+          } else {
+            jvmTop.run(new VMTaggedProfileView(pid, width));
+          }
         }
         else
         {

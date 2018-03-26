@@ -41,6 +41,7 @@ import com.jvmtop.openjdk.tools.ConnectionState;
 import com.jvmtop.openjdk.tools.LocalVirtualMachine;
 import com.jvmtop.openjdk.tools.ProxyClient;
 import com.sun.tools.attach.AttachNotSupportedException;
+import com.tagperf.sampler.ThreadTagMBean;
 
 /**
  * VMInfo retrieves or updates the metrics for a specific remote jvm,
@@ -118,6 +119,8 @@ public class VMInfo
   private MemoryUsage                                             nonHeapMemoryUsage;
 
   private ThreadMXBean                                            threadMXBean;
+
+  private ThreadTagMBean threadTagMBean;
 
   private VMInfoState                                             state_               = VMInfoState.INIT;
 
@@ -333,6 +336,7 @@ public class VMInfo
       heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
       nonHeapMemoryUsage = memoryMXBean.getNonHeapMemoryUsage();
       threadMXBean = proxyClient.getThreadMXBean();
+      threadTagMBean = proxyClient.getThreadTagMBean();
 
       //TODO: fetch jvm-constant data only once
       systemProperties_ = runtimeMXBean.getSystemProperties();
@@ -357,6 +361,10 @@ public class VMInfo
         state_ = VMInfoState.ATTACHED_UPDATE_ERROR;
       }
     }
+  }
+
+  public void flush() {
+    proxyClient.flush();
   }
 
   /**
@@ -556,6 +564,10 @@ public class VMInfo
   public ThreadMXBean getThreadMXBean()
   {
     return threadMXBean;
+  }
+
+  public ThreadTagMBean getThreadTagMBean() {
+    return threadTagMBean;
   }
 
   public OperatingSystemMXBean getOSBean()

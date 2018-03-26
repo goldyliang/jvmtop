@@ -66,19 +66,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import javax.management.Attribute;
-import javax.management.AttributeList;
-import javax.management.AttributeNotFoundException;
-import javax.management.InstanceNotFoundException;
-import javax.management.IntrospectionException;
-import javax.management.InvalidAttributeValueException;
-import javax.management.MBeanException;
-import javax.management.MBeanInfo;
-import javax.management.MBeanOperationInfo;
-import javax.management.MBeanServerConnection;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.ReflectionException;
+import javax.management.*;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
@@ -86,6 +74,8 @@ import javax.management.remote.rmi.RMIConnector;
 import javax.management.remote.rmi.RMIServer;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
 
+import com.tagperf.sampler.ThreadTag;
+import com.tagperf.sampler.ThreadTagMBean;
 import sun.rmi.server.UnicastRef2;
 import sun.rmi.transport.LiveRef;
 
@@ -104,6 +94,7 @@ public class ProxyClient
     private String userName = null;
     private String password = null;
     private boolean hasPlatformMXBeans = false;
+    private boolean hasThreadTagMxBean = false;
     private boolean hasHotSpotDiagnosticMXBean= false;
     private boolean hasCompilationMXBean = false;
     private boolean supportsLockUsage = false;
@@ -137,6 +128,7 @@ public class ProxyClient
     private OperatingSystemMXBean operatingSystemMBean = null;
     private RuntimeMXBean         runtimeMBean = null;
     private ThreadMXBean          threadMBean = null;
+    private ThreadTagMBean threadTagMBean = null;
 
   private java.lang.management.OperatingSystemMXBean sunOperatingSystemMXBean       = null;
 
@@ -414,6 +406,9 @@ public class ProxyClient
         try {
             ObjectName on = new ObjectName(THREAD_MXBEAN_NAME);
             this.hasPlatformMXBeans = server.isRegistered(on);
+
+            this.hasThreadTagMxBean = server.isRegistered(new ObjectName(ThreadTag.MXBEAN_NAME));
+
             this.hasHotSpotDiagnosticMXBean =
                 server.isRegistered(new ObjectName(HOTSPOT_DIAGNOSTIC_MXBEAN_NAME));
             // check if it has 6.0 new APIs
@@ -793,6 +788,16 @@ public class ProxyClient
                                        ThreadMXBean.class);
         }
         return threadMBean;
+    }
+
+    public synchronized ThreadTagMBean getThreadTagMBean()
+            throws IOException, MalformedObjectNameException {
+        if (hasThreadTagMxBean && threadTagMBean == null) {
+            threadTagMBean = JMX.newMBeanProxy(mbsc,  // No cache
+                            new ObjectName(ThreadTag.MXBEAN_NAME),
+                            ThreadTagMBean.class);
+        }
+        return threadTagMBean;
     }
 
     public synchronized OperatingSystemMXBean getOperatingSystemMXBean() throws IOException {
