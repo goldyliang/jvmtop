@@ -60,8 +60,8 @@ public class VMTaggedProfileView extends AbstractConsoleView
     while (cur + millis > System.currentTimeMillis())
     {
       cpuSampler_.update();
-      super.sleep(100);
-      //super.sleep(20);
+      //super.sleep(100);
+      super.sleep(20);
     }
 
   }

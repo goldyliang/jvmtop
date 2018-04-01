@@ -21,6 +21,8 @@
 package com.jvmtop.profiler;
 
 import com.jvmtop.monitor.VMInfo;
+import com.tagperf.sampler.TagExecRecord;
+import com.tagperf.sampler.TagExecRecordsPerThread;
 import com.tagperf.sampler.ThreadTagMBean;
 import com.tagperf.sampler.ThreadTagState;
 
@@ -91,35 +93,40 @@ public class TaggedCPUSampler
   {
     boolean samplesAcquired = false;
 //    vmInfo_.flush();
-    ThreadTagState [] states = threadTagMBean_.getAllThreadTagState();
+    TagExecRecordsPerThread[] execRecordsPerThreads = threadTagMBean_.getAllThreadTagExecRecords();
     samplesAcquired = false;
-    for (ThreadTagState tagState : states)
+    for (TagExecRecordsPerThread execRecordsPerThread : execRecordsPerThreads)
     {
-      long cpuTime = threadMXBean_.getThreadCpuTime(tagState.getThreadId());
-      Long tCPUTime = threadCPUTime.get(tagState.getThreadId());
+      if (execRecordsPerThread == null) continue;
+      long threadId = execRecordsPerThread.getThreadId();
+      long cpuTime = threadMXBean_.getThreadCpuTime(threadId);
+      Long tCPUTime = threadCPUTime.get(threadId);
       if (tCPUTime == null)
       {
         tCPUTime = 0L;
       }
       else
       {
-      Long deltaCpuTime = (cpuTime - tCPUTime);
+        Long deltaCpuTime = (cpuTime - tCPUTime);
 
-      //if (tagState.getState() == State.RUNNABLE) {
-      if (true) {
-          String key = tagState.getTag();
-          if (key == null) {
-            key = "null";
-          } else {
-            key = key;
-          }
-          data_.putIfAbsent(key, new TagStats(key));
-          data_.get(key).getHits().addAndGet(deltaCpuTime);
-          totalThreadCPUTime_.addAndGet(deltaCpuTime);
+          // Update hits for each tag
+          long cpuTimeUsedAllTags = 0;
+          for (String tag : execRecordsPerThread.getTagSet()) {
+            data_.putIfAbsent(tag, new TagStats(tag));
+            long cpuTimeUsed = execRecordsPerThread.getTagExecRecord(tag).getCpuTimeUsed();
+            data_.get(tag).getHits().addAndGet(cpuTimeUsed);
+            cpuTimeUsedAllTags += cpuTimeUsed;
+            //totalThreadCPUTime_.addAndGet(deltaCpuTime);
             samplesAcquired = true;
-        }
+          }
+
+          // Update hits for 'null' tag
+          String nullTag = "null";
+          data_.putIfAbsent(nullTag, new TagStats(nullTag));
+          data_.get(nullTag).getHits().addAndGet( deltaCpuTime - cpuTimeUsedAllTags );
+          totalThreadCPUTime_.addAndGet(deltaCpuTime);
       }
-      threadCPUTime.put(tagState.getThreadId(), cpuTime);
+      threadCPUTime.put(threadId, cpuTime);
     }
     if (samplesAcquired) {
       updateCount_.incrementAndGet();
