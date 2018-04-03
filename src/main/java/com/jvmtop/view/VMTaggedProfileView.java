@@ -55,14 +55,15 @@ public class VMTaggedProfileView extends AbstractConsoleView
   @Override
   public void sleep(long millis) throws Exception
   {
-    long cur = System.currentTimeMillis();
+    //long cur = System.currentTimeMillis();
+    Thread.sleep (millis);
     cpuSampler_.update();
-    while (cur + millis > System.currentTimeMillis())
+    /*(while (cur + millis > System.currentTimeMillis())
     {
       cpuSampler_.update();
       //super.sleep(100);
       super.sleep(20);
-    }
+    }*/
 
   }
 
