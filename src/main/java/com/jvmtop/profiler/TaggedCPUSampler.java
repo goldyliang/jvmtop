@@ -66,6 +66,8 @@ public class TaggedCPUSampler
     //beginCPUTime_ = vmInfo.getProxyClient().getProcessCpuTime();
     beginSystemTime_ = System.currentTimeMillis();
     vmInfo_ = vmInfo;
+
+    setTaggedEnable(true);
   }
 
   public synchronized List<TagStats> getTop(int limit)
@@ -97,41 +99,25 @@ public class TaggedCPUSampler
     samplesAcquired = false;
     for (TagExecRecordsPerThread execRecordsPerThread : execRecordsPerThreads)
     {
-      if (execRecordsPerThread == null) continue;
-      long threadId = execRecordsPerThread.getThreadId();
-      long cpuTime = threadMXBean_.getThreadCpuTime(threadId);
-      Long tCPUTime = threadCPUTime.get(threadId);
-      if (tCPUTime == null)
-      {
-        tCPUTime = 0L;
-      }
-      else
-      {
-        Long deltaCpuTime = (cpuTime - tCPUTime);
+        long threadId = execRecordsPerThread.getThreadId();
+        if (execRecordsPerThread == null) continue;
 
-          // Update hits for each tag
-          long cpuTimeUsedAllTags = 0;
-          for (String tag : execRecordsPerThread.getTagSet()) {
+        for (String tag : execRecordsPerThread.getTagSet()) {
             data_.putIfAbsent(tag, new TagStats(tag));
             long cpuTimeUsed = execRecordsPerThread.getTagExecRecord(tag).getCpuTimeUsed();
             data_.get(tag).getHits().addAndGet(cpuTimeUsed);
-            cpuTimeUsedAllTags += cpuTimeUsed;
-            //totalThreadCPUTime_.addAndGet(deltaCpuTime);
             samplesAcquired = true;
-          }
+        }
 
-          // Update hits for 'null' tag
-          String nullTag = "null";
-          data_.putIfAbsent(nullTag, new TagStats(nullTag));
-          data_.get(nullTag).getHits().addAndGet( deltaCpuTime - cpuTimeUsedAllTags );
-          totalThreadCPUTime_.addAndGet(deltaCpuTime);
-      }
-      threadCPUTime.put(threadId, cpuTime);
+        totalThreadCPUTime_.addAndGet(execRecordsPerThread.getThreadCpuTimeSinceLastSample());
+        threadCPUTime.put(threadId, execRecordsPerThread.getThreadCpuTimeSinceLastSample());
     }
     if (samplesAcquired) {
       updateCount_.incrementAndGet();
     }
     lastUpdatedSystemTime_ = System.currentTimeMillis();
+    //System.out.println ("Current system time: " + String.valueOf( lastUpdatedSystemTime_ * 1000000));
+    //System.out.println ("System elapsed time: " + String.valueOf( getElapsedSystemTime()));
   }
 
   public Long getUpdateCount()
@@ -144,5 +130,12 @@ public class TaggedCPUSampler
     return (lastUpdatedSystemTime_ - beginSystemTime_) * 1000000;
   }
 
+  public void setTaggedEnable( boolean enable) {
+    if (enable) {
+      threadTagMBean_.enableTagging();
+    } else {
+      threadTagMBean_.disableTagging();
+    }
+  }
 }
 
